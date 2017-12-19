@@ -113,11 +113,11 @@ def gconnect():
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
 
-# See if a user exists, if it doesn't make a new one
-user_id = getUserID(login_session['email'])
-if not user_id:
-  user_id = createUser(login_session)
-login_session['user_id'] = user_id
+    # see if user exists, if it doesn't make a new one
+    user_id = getUserID(login_session['email'])
+    if not user_id:
+        user_id = createUser(login_session)
+    login_session['user_id'] = user_id
 
     output = ''
     output += '<h1>Welcome, '
@@ -127,19 +127,18 @@ login_session['user_id'] = user_id
     output += login_session['picture']
     output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
     flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
     return output
 
 # User Helper Functions
 
 
 def createUser(login_session):
-  newUser = User(name=login_session['username'], email=login_session['email'],
-   picture=login_session['email'], picture=login_session['picture'])
-  session.add(newUser)
-  session.commit()
-  user = session.query(User).filter_by(email=login_session['email']).one()
-  return user.id
+    newUser = User(name=login_session['username'], email=login_session[
+                   'email'], picture=login_session['picture'])
+    session.add(newUser)
+    session.commit()
+    user = session.query(User).filter_by(email=login_session['email']).one()
+    return user.id
 
 def getUserInfo(user_id):
   user = session.query(User).filter_by(id=user_id).one()
@@ -212,7 +211,10 @@ def restaurantsJSON():
 @app.route('/restaurant/')
 def showRestaurants():
     restaurants = session.query(Restaurant).order_by(asc(Restaurant.name))
-    return render_template('restaurants.html', restaurants=restaurants)
+    if 'username' not in login_session:
+      return render_template('publicrestaurants.html', restaurants=restaurants)
+    else:
+      return render_template('restaurants.html', restaurants=restaurants)
 
 # Create a new restaurant
 
@@ -271,9 +273,14 @@ def deleteRestaurant(restaurant_id):
 @app.route('/restaurant/<int:restaurant_id>/menu/')
 def showMenu(restaurant_id):
     restaurant = session.query(Restaurant).filter_by(id=restaurant_id).one()
+    creator = getUserInfo(restaurant.user_id)
     items = session.query(MenuItem).filter_by(
         restaurant_id=restaurant_id).all()
-    return render_template('menu.html', items=items, restaurant=restaurant)
+    if 'username' not in login_session or creator.id != login_session['user_id']:
+      return render_template('publicmenu.html', items = items, 
+        restaurant = restaurant, creator = creator)
+    else:
+      return render_template('menu.html', items=items, restaurant=restaurant, creator = creator)
 
 
 # Create a new menu item
